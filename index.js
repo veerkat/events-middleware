@@ -1,6 +1,7 @@
 'use strict';
 
-const EventEmitter = require('events');
+const util = require('util');
+const _EventEmitter = require('events');
 
 function callable(instance) {
     return function(...args) {
@@ -31,7 +32,7 @@ class EventMiddleware {
         this._pres = [];
         this._posts = [];
         this._options = {};
-        this._onError = function (err) {
+        this._onError = function(err) {
             return Promise.reject(err);
         };
 
@@ -42,9 +43,13 @@ class EventMiddleware {
     }
 
     _initOptions(options) {
+        const getBoolOption = (options, name, defaultBool) => {
+            return util.isBoolean(options[name]) ? options[name] :
+                (util.isBoolean(this._options[name]) ? this._options[name] : defaultBool);
+        };
         return {
-            globalArgs: options.globalArgs || this._options.globalArgs || false,
-            multiArgs: options.multiArgs || this._options.multiArgs || true
+            globalArgs: getBoolOption(options, 'globalArgs', false),
+            multiArgs: getBoolOption(options, 'multiArgs', true)
         };
     }
 
@@ -57,7 +62,7 @@ class EventMiddleware {
         this._fns = this._pres.concat([this._main]).concat(this._posts);
     }
 
-    catch(callback) {
+    catch (callback) {
         this._onError = callback;
         return this;
     }
@@ -88,14 +93,14 @@ class EventMiddleware {
                 if (this._options.globalArgs) {
                     nextValue = value;
                 }
+                if (!this._options.multiArgs) {
+                    nextValue = nextValue.slice(0, 1);
+                }
                 if (idx >= len) {
                     const _value = nextValue.length < 2 ? nextValue[0] : nextValue;
                     return resolve(_value);
                 }
                 const nextFn = this._fns[idx++];
-                if (!this._options.multiArgs) {
-                    nextValue = nextValue.slice(0, 1);
-                }
                 nextFn.apply(this, nextValue).then(next).catch(reject);
             };
             next(value);
@@ -103,7 +108,7 @@ class EventMiddleware {
     }
 }
 
-class _EventEmitter extends EventEmitter {
+class EventEmitter extends _EventEmitter {
     constructor() {
         super();
         this._middlewares = new Map();
@@ -166,5 +171,7 @@ class _EventEmitter extends EventEmitter {
 
 }
 
-module.exports.EventMiddleware = EventMiddleware;
-module.exports.EventEmitter = _EventEmitter;
+module.exports = {
+    EventMiddleware,
+    EventEmitter
+};
