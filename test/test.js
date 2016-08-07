@@ -413,7 +413,24 @@ describe('events-middleware', function() {
 
     describe('EventEmitter', function() {
         describe('on', function() {
-            it('', function() {});
+            it('should work', function() {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                e._middlewares.has('test').should.be.True();
+                e.eventNames().includes('test').should.be.True();
+            });
+
+            it('throw error when event has added', function(done) {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                try {
+                    e.on('test', noop);
+                } catch (err) {
+                    err.should.be.Error();
+                    err.message.should.be.eql('event test has added');
+                    done();
+                }
+            });
         });
 
         describe('pre', function() {
@@ -429,6 +446,10 @@ describe('events-middleware', function() {
         });
 
         describe('postEach', function() {
+            it('', function() {});
+        });
+
+        describe('emit', function() {
             it('', function() {});
         });
 
