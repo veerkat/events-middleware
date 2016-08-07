@@ -11,32 +11,46 @@ function callable(instance) {
 function wrapPromise(fn) {
     return function(...args) {
         return new Promise((resolve, reject) => {
-            const cb = function(err, ...extra) {
+            const cb = function(err, ...value) {
                 if (err) {
                     return reject(err);
                 } else {
-                    const value = extra.length < 2 ? extra[0] : extra;
                     return resolve(value);
                 }
             };
-            let promise = fn.apply(this, [...args, cb]);
+            const promise = fn.apply(this, [...args, cb]);
             if (Promise.resolve(promise) == promise) {
-                promise.then(resolve).catch(reject);
+                promise.then((...value) => resolve(value)).catch(reject);
             }
         });
     };
 }
 
 class EventMiddleware {
-    constructor(eventName, fn) {
-        this.eventName = eventName;
+    constructor(eventName, fn, options = {}) {
         this._pres = [];
         this._posts = [];
-        this._main = this.wrapPromise(fn);
+        this._options = {};
         this._onError = function (err) {
             return Promise.reject(err);
         };
+
+        this.eventName = eventName;
+        this._main = wrapPromise(fn);
+        this.setOptions(options);
         this._compose();
+    }
+
+    _initOptions(options) {
+        return {
+            globalArgs: options.globalArgs || this._options.globalArgs || false,
+            multiArgs: options.multiArgs || this._options.multiArgs || true
+        };
+    }
+
+    setOptions(options) {
+        this._options = this._initOptions(options);
+        return this;
     }
 
     _compose() {
@@ -45,6 +59,7 @@ class EventMiddleware {
 
     catch(callback) {
         this._onError = callback;
+        return this;
     }
 
     _addFns(role, fns) {
@@ -56,11 +71,13 @@ class EventMiddleware {
     }
 
     pre(fns) {
-        return this._addFns('_pres', fns);
+        this._addFns('_pres', fns);
+        return this;
     }
 
     post(fns) {
-        return this._addFns('_posts', fns);
+        this._addFns('_posts', fns);
+        return this;
     }
 
     call(...value) {
@@ -68,10 +85,17 @@ class EventMiddleware {
         const len = this._fns.length;
         return new Promise((resolve, reject) => {
             const next = (nextValue) => {
-                if (idx > len) {
-                    resolve(nextValue);
+                if (this._options.globalArgs) {
+                    nextValue = value;
+                }
+                if (idx >= len) {
+                    const _value = nextValue.length < 2 ? nextValue[0] : nextValue;
+                    return resolve(_value);
                 }
                 const nextFn = this._fns[idx++];
+                if (!this._options.multiArgs) {
+                    nextValue = nextValue.slice(0, 1);
+                }
                 nextFn.apply(this, nextValue).then(next).catch(reject);
             };
             next(value);
@@ -115,13 +139,13 @@ class _EventEmitter extends EventEmitter {
     }
 
     _eachMiddleware(method, ...args) {
-        for (let middleware of this._middlewares.values) {
+        for (let middleware of this._middlewares.values()) {
             middleware[method](...args);
         }
     }
 
     pre(eventNames, fns) {
-        this._callMiddleware('pre', eventNames, fns);
+        this._callMiddlewares('pre', eventNames, fns);
         return this;
     }
 
@@ -131,7 +155,7 @@ class _EventEmitter extends EventEmitter {
     }
 
     post(eventNames, fns) {
-        this._callMiddleware('post', eventNames, fns);
+        this._callMiddlewares('post', eventNames, fns);
         return this;
     }
 
