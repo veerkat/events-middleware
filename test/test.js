@@ -416,37 +416,184 @@ describe('events-middleware', function() {
             it('should work', function() {
                 const e = new EventEmitter();
                 e.on('test', noop);
-                e._middlewares.has('test').should.be.True();
+                e._middlewares.get('test').should.be.instanceof(EventMiddleware);
                 e.eventNames().includes('test').should.be.True();
             });
 
-            it('throw error when event has added', function(done) {
+            it('throw error if eventName has added', function(done) {
                 const e = new EventEmitter();
                 e.on('test', noop);
                 try {
                     e.on('test', noop);
                 } catch (err) {
                     err.should.be.Error();
-                    err.message.should.be.eql('event test has added');
+                    err.message.should.be.eql('eventName test has added');
                     done();
                 }
             });
         });
 
+        describe('has', function() {
+            it('should return false if event not exists', function() {
+                const e = new EventEmitter();
+                e.has('test').should.be.False();
+            });
+
+            it('should return true if event exists', function() {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                e.has('test').should.be.True();
+            });
+        });
+
         describe('pre', function() {
-            it('', function() {});
+            it('should work when passing single eventName and single fn', function() {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                e.pre('test', noop);
+                const m = e._middlewares.get('test');
+                m._fns.length.should.be.eql(2);
+            });
+
+            it('should work when passing single eventName and fn array', function() {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                e.pre('test', [noop, noop]);
+                const m = e._middlewares.get('test');
+                m._fns.length.should.be.eql(3);
+            });
+
+            it('should work when passing eventName array and single fn', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.pre(['test1', 'test2'], noop);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(2);
+                m2._fns.length.should.be.eql(2);
+            });
+
+            it('should work when passing eventName array and fn array', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.pre(['test1', 'test2'], [noop, noop]);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(3);
+                m2._fns.length.should.be.eql(3);
+            });
+
+            it('throw error when eventName not found', function(done) {
+                const e = new EventEmitter();
+                try {
+                    e.pre('test', noop);
+                } catch (err) {
+                    err.should.be.instanceof(Error);
+                    err.message.should.be.eql('eventName test not found');
+                    done();
+                }
+            });
         });
 
         describe('post', function() {
-            it('', function() {});
+            it('should work when passing single eventName and single fn', function() {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                e.post('test', noop);
+                const m = e._middlewares.get('test');
+                m._fns.length.should.be.eql(2);
+            });
+
+            it('should work when passing single eventName and fn array', function() {
+                const e = new EventEmitter();
+                e.on('test', noop);
+                e.post('test', [noop, noop]);
+                const m = e._middlewares.get('test');
+                m._fns.length.should.be.eql(3);
+            });
+
+            it('should work when passing eventName array and single fn', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.post(['test1', 'test2'], noop);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(2);
+                m2._fns.length.should.be.eql(2);
+            });
+
+            it('should work when passing eventName array and fn array', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.post(['test1', 'test2'], [noop, noop]);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(3);
+                m2._fns.length.should.be.eql(3);
+            });
+
+            it('throw error when eventName not found', function(done) {
+                const e = new EventEmitter();
+                try {
+                    e.post('test', noop);
+                } catch (err) {
+                    err.should.be.instanceof(Error);
+                    err.message.should.be.eql('eventName test not found');
+                    done();
+                }
+            });
         });
 
         describe('preEach', function() {
-            it('', function() {});
+            it('should work when passing single fn', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.preEach(noop);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(2);
+                m2._fns.length.should.be.eql(2);
+            });
+
+            it('should work when passing fn array', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.preEach([noop, noop]);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(3);
+                m2._fns.length.should.be.eql(3);
+            });
         });
 
         describe('postEach', function() {
-            it('', function() {});
+            it('should work when passing single fn', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.postEach(noop);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(2);
+                m2._fns.length.should.be.eql(2);
+            });
+
+            it('should work when passing fn array', function() {
+                const e = new EventEmitter();
+                e.on('test1', noop);
+                e.on('test2', noop);
+                e.postEach([noop, noop]);
+                const m1 = e._middlewares.get('test1');
+                const m2 = e._middlewares.get('test2');
+                m1._fns.length.should.be.eql(3);
+                m2._fns.length.should.be.eql(3);
+            });
         });
 
         describe('emit', function() {
