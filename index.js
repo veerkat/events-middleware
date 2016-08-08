@@ -175,7 +175,6 @@ class EventEmitter extends _EventEmitter {
         this._eachMiddleware('post', fns);
         return this;
     }
-
 }
 
 module.exports = {
