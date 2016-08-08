@@ -116,7 +116,11 @@ class EventEmitter extends _EventEmitter {
 
         this._middlewares = new Map();
 
-        this.options = options;
+        this._options = options;
+    }
+
+    setOptions(options) {
+        this._options = options;
     }
 
     has(eventName) {
@@ -128,7 +132,7 @@ class EventEmitter extends _EventEmitter {
             throw Error(`eventName ${eventName} has added`);
         }
         const middleware = new EventMiddleware(eventName, listener,
-                                               options || this.options.middleware || {});
+                                               options || this._options.middleware || {});
         this._middlewares.set(eventName, middleware);
         return super.on(eventName, callable(middleware));
     }
