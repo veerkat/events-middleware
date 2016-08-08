@@ -115,7 +115,7 @@ describe('events-middleware', function() {
                 });
             });
 
-            it('should work with globalArgs is true', function() {
+            it('should work when globalArgs is true', function() {
                 const m = new EventMiddleware('test', function(g, next) {
                     next(null, g.value + 1);
                 }, {
@@ -137,7 +137,7 @@ describe('events-middleware', function() {
                 });
             });
 
-            it('should work with multiArgs is false', function() {
+            it('should work when multiArgs is false', function() {
                 const m = new EventMiddleware('test', function(value, next) {
                     next(null, value + 1);
                 }, {
@@ -597,7 +597,75 @@ describe('events-middleware', function() {
         });
 
         describe('emit', function() {
-            it('', function() {});
+            it('should work with default options', function(done) {
+                const e = new EventEmitter();
+                e.on('test', function(value1, value2, next) {
+                    next(null, value1 + 1, value2 + 1);
+                });
+                e.pre('test', function(value1, value2, next) {
+                    next(null, value1 + 1, value2 + 1);
+                });
+                e.post('test', function(value1, value2, next) {
+                    try {
+                        value1.should.be.eql(2);
+                        value2.should.be.eql(3);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                e.emit('test', 0, 1);
+            });
+
+            it('should work when globalArgs is true', function(done) {
+                const e = new EventEmitter({
+                    middleware: {
+                        globalArgs: true
+                    }
+                });
+                e.on('test', function(_g, next) {
+                    _g.value += 1;
+                    next();
+                });
+                e.pre('test', function(_g, next) {
+                    _g.value += 1;
+                    next();
+                });
+                e.post('test', function(_g, next) {
+                    try {
+                        _g.value.should.be.eql(2);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                e.emit('test', {value: 0});
+
+            });
+
+            it('should work when multiArgs is false', function(done) {
+                const e = new EventEmitter({
+                    middleware: {
+                        multiArgs: false
+                    }
+                });
+                e.on('test', function(value, next) {
+                    next(null, value + 1);
+                });
+                e.pre('test', function(value, next) {
+                    next(null, value + 1);
+                });
+                e.post('test', function(value, next) {
+                    try {
+                        value.should.be.eql(2);
+                        next.should.be.Function();
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                e.emit('test', 0, 1);
+            });
         });
 
         describe('onError', function() {
