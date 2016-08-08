@@ -31,7 +31,10 @@ class EventMiddleware {
     constructor(eventName, fn, options = {}) {
         this._pres = [];
         this._posts = [];
-        this._options = {};
+        this._options = {
+            globalArgs: false,
+            multiArgs: true
+        };
         this._onError = function(err) {
             return Promise.reject(err);
         };
@@ -43,13 +46,12 @@ class EventMiddleware {
     }
 
     _initOptions(options) {
-        const getBoolOption = (options, name, defaultBool) => {
-            return util.isBoolean(options[name]) ? options[name] :
-                (util.isBoolean(this._options[name]) ? this._options[name] : defaultBool);
+        const getBoolOption = (options, name) => {
+            return util.isBoolean(options[name]) ? options[name] : this._options[name];
         };
         return {
-            globalArgs: getBoolOption(options, 'globalArgs', false),
-            multiArgs: getBoolOption(options, 'multiArgs', true)
+            globalArgs: getBoolOption(options, 'globalArgs'),
+            multiArgs: getBoolOption(options, 'multiArgs')
         };
     }
 
@@ -109,20 +111,24 @@ class EventMiddleware {
 }
 
 class EventEmitter extends _EventEmitter {
-    constructor() {
+    constructor(options = {}) {
         super();
+
         this._middlewares = new Map();
+
+        this.options = options;
     }
 
     has(eventName) {
         return this._middlewares.has(eventName);
     }
 
-    on(eventName, listener) {
+    on(eventName, listener, options) {
         if (this.eventNames().includes(eventName)) {
             throw Error(`eventName ${eventName} has added`);
         }
-        const middleware = new EventMiddleware(eventName, listener);
+        const middleware = new EventMiddleware(eventName, listener,
+                                               options || this.options.middleware || {});
         this._middlewares.set(eventName, middleware);
         return super.on(eventName, callable(middleware));
     }
