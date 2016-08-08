@@ -114,9 +114,13 @@ class EventEmitter extends _EventEmitter {
         this._middlewares = new Map();
     }
 
+    has(eventName) {
+        return this._middlewares.has(eventName);
+    }
+
     on(eventName, listener) {
         if (this.eventNames().includes(eventName)) {
-            throw Error(`event ${eventName} has added`);
+            throw Error(`eventName ${eventName} has added`);
         }
         const middleware = new EventMiddleware(eventName, listener);
         this._middlewares.set(eventName, middleware);
@@ -139,7 +143,10 @@ class EventEmitter extends _EventEmitter {
         }
         eventNames.forEach(eventName => {
             const middleware = this._middlewares.get(eventName);
-            return middleware && middleware[method](...args);
+            if (!middleware) {
+                throw new Error(`eventName ${eventName} not found`);
+            }
+            return middleware[method](...args);
         });
     }
 
