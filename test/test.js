@@ -23,12 +23,12 @@ process.on('unhandledRejection', function(err, p) {
 describe('events-middleware', function() {
     describe('EventMiddleware', function() {
         describe('setOptions', function() {
+            const options = {
+                multiArgs: false,
+                globalArgs: true
+            };
             it('should work', function() {
                 const m = new EventMiddleware('test', noop);
-                const options = {
-                    multiArgs: false,
-                    globalArgs: true
-                };
                 m._options.multiArgs.should.not.be.eql(options.multiArgs);
                 m._options.globalArgs.should.not.be.eql(options.globalArgs);
                 m.setOptions(options);
@@ -37,10 +37,6 @@ describe('events-middleware', function() {
             });
 
             it('should be equivalent to setting options by constructor method', function() {
-                const options = {
-                    multiArgs: false,
-                    globalArgs: true
-                };
                 const m1 = new EventMiddleware('test', noop, options);
                 const m2 = new EventMiddleware('test', noop);
                 m2.setOptions(options);
@@ -429,20 +425,16 @@ describe('events-middleware', function() {
 
     describe('MiddlewareCollection', function() {
         describe('setOptions', function() {
+            const options = {
+                multiArgs: false,
+                globalArgs: true
+            };
             it('should work', function() {
-                const options = {
-                    multiArgs: false,
-                    globalArgs: true
-                };
                 const mc = new MiddlewareCollection();
                 mc.setOptions(options);
                 mc._options.should.be.deepEqual(options);
             });
             it('should be equivalent to setting options by constructor method', function() {
-                const options = {
-                    multiArgs: false,
-                    globalArgs: true
-                };
                 const mc1 = new MiddlewareCollection(options);
                 const mc2 = new MiddlewareCollection();
                 mc2.setOptions(options);
@@ -586,14 +578,25 @@ describe('events-middleware', function() {
                 const nmc = mc.select(['test3']);
                 nmc.empty().should.be.True();
             });
+
+            it('should return new instance when passing single eventName', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                const nmc1 = mc.select('test1');
+                nmc1.should.be.instanceof(MiddlewareCollection);
+                nmc1.eventNames().should.be.deepEqual(['test1']);
+                const nmc2 = mc.select('test3');
+                nmc2.empty().should.be.True();
+            });
         });
 
         describe('remove', function() {
-
+            it('', function() {});
         });
 
         describe('clear', function() {
-
+            it('', function() {});
         });
 
         describe('has', function() {
@@ -638,8 +641,23 @@ describe('events-middleware', function() {
 
     describe('EventEmitter', function() {
         describe('setOptions', function() {
-            it('should work', function() {});
-            it('should be equivalent to setting options by constructor method', function() {});
+            const options = {
+                middleware: {
+                    multiArgs: false,
+                    globalArgs: true
+                }
+            };
+            it('should work', function() {
+                const e = new EventEmitter();
+                e.setOptions(options);
+                e._options.should.be.deepEqual(options);
+            });
+            it('should be equivalent to setting options by constructor method', function() {
+                const e1 = new EventEmitter(options);
+                const e2 = new MiddlewareCollection();
+                e2.setOptions(options);
+                e2._options.should.be.deepEqual(e1._options);
+            });
         });
 
         describe('middleware', function() {
