@@ -113,6 +113,7 @@ class EventMiddleware {
 class MiddlewareCollection {
     constructor(options) {
         this._middlewares = new Map();
+        this._parent = this;
 
         this.setOptions(options);
     }
@@ -164,7 +165,7 @@ class MiddlewareCollection {
         });
         const mc = new MiddlewareCollection(this._options);
         mc._update(middlewares);
-        mc._setParent(this.parent || this);
+        mc._setParent(this._parent || this);
         return mc;
     }
 
@@ -209,7 +210,8 @@ class MiddlewareCollection {
 
     clear() {
         this.eventNames().forEach(eventName => {
-            this._parent._middleware.delete(eventName);
+            this._middlewares.delete(eventName);
+            this._parent._middlewares.delete(eventName);
         });
         return this;
     }
