@@ -121,6 +121,16 @@ class MiddlewareManager {
         this._options = options;
     }
 
+    new(eventName, fn, options) {
+        if (this._middlewares.has(eventName)) {
+            throw Error(`eventName ${eventName} has added`);
+        }
+        const middleware = new EventMiddleware(eventName, listener,
+                                               options || this._options || {});
+        this._middlewares.set(eventName, middleware);
+        return middleware;
+    }
+
     onError(eventNames, callback) {
         if (callback === undefined) {
             callback = eventNames;
@@ -178,24 +188,23 @@ class MiddlewareManager {
 class EventEmitter extends _EventEmitter {
     constructor(options = {}) {
         super();
-        
-        this._middlewares = new MiddlewareManager(options.middleware || {});
-
-        this._options = options;
+        this._middlewares = new MiddlewareManager();
+        this.setOptions(options);
     }
 
     setOptions(options) {
         this._options = options;
+        this._middlewares.setOptions(this._options.middleware);
     }
 
     middleware(eventName, listener, options) {
-        if (this.eventNames().includes(eventName)) {
-            throw Error(`eventName ${eventName} has added`);
+        if (!eventName) {
+            return this._middlewares;
         }
-        const middleware = new EventMiddleware(eventName, listener,
-                                               options || this._options.middleware || {});
-        this._middlewares.set(eventName, middleware);
-        return super.on(eventName, callable(middleware));
+
+        const middleware = this._middlewares.new(eventName, listener, options);
+        super.on(eventName, callable(middleware));
+        return this._middlewares;
     }
 }
 
