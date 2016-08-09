@@ -110,12 +110,11 @@ class EventMiddleware {
     }
 }
 
-class EventEmitter {
+class EventEmitter extends _EventEmitter {
     constructor(options = {}) {
         super();
 
         this._middlewares = new Map();
-        this._events = new _EventEmitter();
 
         this._options = options;
     }
@@ -128,10 +127,6 @@ class EventEmitter {
         return this._middlewares.has(eventName);
     }
     
-    emit(...args) {
-        this._events.emit(...args);
-    }
-    
     on(eventName, listener, options) {
         if (this.eventNames().includes(eventName)) {
             throw Error(`eventName ${eventName} has added`);
@@ -139,8 +134,7 @@ class EventEmitter {
         const middleware = new EventMiddleware(eventName, listener,
                                                options || this._options.middleware || {});
         this._middlewares.set(eventName, middleware);
-        this._events.on(eventName, callable(middleware));
-        return this;
+        return super.on(eventName, callable(middleware));
     }
     
     once(eventName, listener, options) {
@@ -151,7 +145,15 @@ class EventEmitter {
         
     }
     
+    removeListener(eventNames) {
+        
+    }
+    
     removeAll() {
+        
+    }
+    
+    removeAllListeners(eventNames) {
         
     }
 
