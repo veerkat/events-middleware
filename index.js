@@ -151,6 +151,10 @@ class MiddlewareCollection {
     }
 
     select(eventNames) {
+        if (!Array.isArray(eventNames)) {
+            eventNames = [eventNames];
+        }
+
         const middlewares = new Map();
         eventNames.forEach(eventName => {
             const middleware = this._middlewares.get(eventName);
@@ -196,10 +200,10 @@ class MiddlewareCollection {
 
         eventNames.forEach(eventName => {
             if (this.has(eventName)) {
+                this._middlewares.delete(eventName);
                 this._parent._middlewares.delete(eventName);
             }
         });
-
         return this;
     }
 
