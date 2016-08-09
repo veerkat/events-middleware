@@ -483,12 +483,14 @@ describe('events-middleware', function() {
         describe('empty', function() {
             it('should return true if empty', function() {
                 const mc = new MiddlewareCollection();
+                mc._middlewares.size.should.be.eql(0);
                 mc.empty().should.be.True();
             });
 
             it('should return false if empty', function() {
                 const mc = new MiddlewareCollection();
                 mc.new('test', noop);
+                mc._middlewares.size.should.not.be.eql(0);
                 mc.empty().should.be.False();
             });
         });
@@ -592,11 +594,46 @@ describe('events-middleware', function() {
         });
 
         describe('remove', function() {
-            it('', function() {});
+            it('should remove eventNames', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                mc.remove('test2');
+                mc.eventNames().should.be.deepEqual(['test1']);
+                mc.remove(['test1']);
+                mc.empty().should.be.True();
+            });
+
+            it('should remove eventNames by sub collection', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                const sub = mc.select(['test1', 'test2']);
+                sub.remove('test2');
+                mc.eventNames().should.be.deepEqual(['test1']);
+                sub.remove(['test1']);
+                mc.empty().should.be.True();
+            });
         });
 
         describe('clear', function() {
-            it('', function() {});
+            it('should clear by sub collection', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                const sub = mc.select('test2');
+                sub.clear();
+                sub.empty().should.be.True();
+                mc.eventNames().should.be.deepEqual(['test1']);
+            });
+
+            it('should clear all', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                mc.clear();
+                mc.empty().should.be.True();
+            });
         });
 
         describe('has', function() {
