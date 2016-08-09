@@ -111,29 +111,57 @@ class EventMiddleware {
 }
 
 class MiddlewareCollection {
-    constructor(options = {}, middlewares) {
-        this._middlewares = middlewares || new Map();
-        
+    constructor(options) {
+        this._middlewares = new Map();
+
         this.setOptions(options);
     }
-    
+
+    _setParent(parent) {
+        this._parent = parent;
+    }
+
+    _update(middlewares) {
+        for (let [eventName, middleware] of middlewares) {
+            this._middlewares.set(eventName, middleware);
+        }
+    }
+
+    empty() {
+        return this._middlewares.size === 0;
+    }
+
     setOptions(options) {
-        this._options = options;
+        this._options = options || {};
+        return this;
+    }
+
+    eventNames() {
+        return Array.from(this._middlewares.keys());
     }
 
     new(eventName, fn, options) {
         if (this._middlewares.has(eventName)) {
             throw Error(`eventName ${eventName} has added`);
         }
-        const middleware = new EventMiddleware(eventName, listener,
-                                               options || this._options || {});
+        const middleware = new EventMiddleware(eventName, fn,
+            options || this._options || {});
         this._middlewares.set(eventName, middleware);
         return middleware;
     }
-    
+
     select(eventNames) {
-        const middlewares;
-        return new MiddlewareCollection(this._options, middlewares);
+        const middlewares = new Map();
+        eventNames.forEach(eventName => {
+            const middleware = this._middlewares.get(eventName);
+            if (middleware) {
+                middlewares.set(eventName, middleware);
+            }
+        });
+        const mc = new MiddlewareCollection(this._options);
+        mc._update(middlewares);
+        mc._setParent(this.parent || this);
+        return mc;
     }
 
     onError(callback) {
@@ -146,7 +174,7 @@ class MiddlewareCollection {
             middleware[method](...args);
         }
     }
-    
+
     pre(fns) {
         this._eachMiddleware('pre', fns);
         return this;
@@ -156,9 +184,30 @@ class MiddlewareCollection {
         this._eachMiddleware('post', fns);
         return this;
     }
-    
+
     has(eventName) {
         return this._middlewares.has(eventName);
+    }
+
+    remove(eventNames) {
+        if (!Array.isArray(eventNames)) {
+            eventNames = [eventNames];
+        }
+
+        eventNames.forEach(eventName => {
+            if (this.has(eventName)) {
+                this._parent._middlewares.delete(eventName);
+            }
+        });
+
+        return this;
+    }
+
+    clear() {
+        this.eventNames().forEach(eventName => {
+            this._parent._middleware.delete(eventName);
+        });
+        return this;
     }
 }
 
@@ -172,6 +221,7 @@ class EventEmitter extends _EventEmitter {
     setOptions(options) {
         this._options = options;
         this._middlewares.setOptions(this._options.middleware);
+        return this;
     }
 
     middleware(eventName, listener, options) {
@@ -181,7 +231,7 @@ class EventEmitter extends _EventEmitter {
         if (!listener) {
             return this._middlewares.select(eventName);
         }
-        
+
         const middleware = this._middlewares.new(eventName, listener, options);
         super.on(eventName, callable(middleware));
         return this._middlewares.select(eventName);

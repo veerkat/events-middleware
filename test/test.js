@@ -11,12 +11,43 @@
 const should = require('should');
 const {
     EventMiddleware,
+    MiddlewareCollection,
     EventEmitter
 } = require('../index');
 const noop = function() {};
 
+process.on('unhandledRejection', function(err, p) {
+    console.warn("WARNING: Unhandled promise rejection. Reason: " + err.stack);
+});
+
 describe('events-middleware', function() {
     describe('EventMiddleware', function() {
+        describe('setOptions', function() {
+            it('should work', function() {
+                const m = new EventMiddleware('test', noop);
+                const options = {
+                    multiArgs: false,
+                    globalArgs: true
+                };
+                m._options.multiArgs.should.not.be.eql(options.multiArgs);
+                m._options.globalArgs.should.not.be.eql(options.globalArgs);
+                m.setOptions(options);
+                m._options.multiArgs.should.be.eql(options.multiArgs);
+                m._options.globalArgs.should.be.eql(options.globalArgs);
+            });
+
+            it('should be equivalent to setting options by constructor method', function() {
+                const options = {
+                    multiArgs: false,
+                    globalArgs: true
+                };
+                const m1 = new EventMiddleware('test', noop, options);
+                const m2 = new EventMiddleware('test', noop);
+                m2.setOptions(options);
+                m2._options.should.be.deepEqual(m1._options);
+            });
+        });
+
         describe('pre', function() {
             it('should work when passing single pre function', function() {
                 const m = new EventMiddleware('test', noop);
@@ -385,21 +416,6 @@ describe('events-middleware', function() {
             });
         });
 
-        describe('setOptions', function() {
-            it('should work', function() {
-                const m = new EventMiddleware('test', noop);
-                const options = {
-                    multiArgs: false,
-                    globalArgs: true
-                };
-                m._options.multiArgs.should.not.be.eql(options.multiArgs);
-                m._options.globalArgs.should.not.be.eql(options.globalArgs);
-                m.setOptions(options);
-                m._options.multiArgs.should.be.eql(options.multiArgs);
-                m._options.globalArgs.should.be.eql(options.globalArgs);
-            });
-        });
-
         describe('method chaining', function() {
             it('should work', function() {
                 const m = new EventMiddleware('test', noop);
@@ -411,363 +427,235 @@ describe('events-middleware', function() {
         });
     });
 
-    describe('EventEmitter', function() {
+    describe('MiddlewareCollection', function() {
         describe('setOptions', function() {
             it('should work', function() {
+                const options = {
+                    multiArgs: false,
+                    globalArgs: true
+                };
+                const mc = new MiddlewareCollection();
+                mc.setOptions(options);
+                mc._options.should.be.deepEqual(options);
             });
-            it('should be equivalent to setting options by constructor method', function() {});
+            it('should be equivalent to setting options by constructor method', function() {
+                const options = {
+                    multiArgs: false,
+                    globalArgs: true
+                };
+                const mc1 = new MiddlewareCollection(options);
+                const mc2 = new MiddlewareCollection();
+                mc2.setOptions(options);
+                mc2._options.should.be.deepEqual(mc1._options);
+            });
         });
-        
-        describe('on', function() {
-            it('should work', function() {
-                const e = new EventEmitter();
-                e.on('test', noop);
-                e._middlewares.get('test').should.be.instanceof(EventMiddleware);
-                e.eventNames().includes('test').should.be.True();
-            });
-            
-            it('should set middleware options by on method', function() {
+
+        describe('new', function() {
+            it('should work with default options', function() {
                 const options = {
-                    
+                    multiArgs: false,
+                    globalArgs: true
                 };
-                const e = new EventEmitter();
-                e.on('test', noop, options);
-                e._middlewares.get('test')._options.should.be.deelEqual(options);
-            });
-            
-            it('should set middleware options by constructor method', function() {
-                const options = {
-                    
-                };
-                const e = new EventEmitter({
-                    middleware: options
-                });
-                e.on('test', noop);
-                e._middlewares.get('test')._options.should.be.deelEqual(options);
+                const mc = new MiddlewareCollection(options);
+                const m = mc.new('test', noop);
+                m.should.be.instanceof(EventMiddleware);
+                m._options.should.be.deepEqual(m._options);
+                mc._middlewares.get('test').should.be.eql(m);
             });
 
-            it('throw error if eventName has added', function(done) {
-                const e = new EventEmitter();
-                e.on('test', noop);
+            it('should work when setting options', function() {
+                const options = {
+                    multiArgs: false,
+                    globalArgs: true
+                };
+                const mc = new MiddlewareCollection();
+                const m = mc.new('test', noop, options);
+                m.should.be.instanceof(EventMiddleware);
+                m._options.should.be.deepEqual(options);
+                mc._middlewares.get('test').should.be.eql(m);
+            });
+
+            it('should throw error when eventName has added', function(done) {
+                const mc = new MiddlewareCollection();
+                const m = mc.new('test', noop);
                 try {
-                    e.on('test', noop);
+                    mc.new('test', noop);
                 } catch (err) {
-                    err.should.be.Error();
+                    err.should.be.instanceof(Error);
                     err.message.should.be.eql('eventName test has added');
                     done();
                 }
             });
         });
 
-        describe('has', function() {
-            it('should return false if event not exists', function() {
-                const e = new EventEmitter();
-                e.has('test').should.be.False();
+        describe('empty', function() {
+            it('should return true if empty', function() {
+                const mc = new MiddlewareCollection();
+                mc.empty().should.be.True();
             });
 
-            it('should return true if event exists', function() {
-                const e = new EventEmitter();
-                e.on('test', noop);
-                e.has('test').should.be.True();
+            it('should return false if empty', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test', noop);
+                mc.empty().should.be.False();
+            });
+        });
+
+        describe('eventNames', function() {
+            it('should get eventName array', function() {
+                const mc = new MiddlewareCollection();
+                mc.eventNames().should.be.eql([]);
+                mc.new('test1', noop);
+                mc.eventNames().should.be.eql(['test1']);
+                mc.new('test2', noop);
+                mc.eventNames().should.be.eql(['test1', 'test2']);
             });
         });
 
         describe('pre', function() {
-            it('should work when passing single eventName and single fn', function() {
-                const e = new EventEmitter();
-                e.on('test', noop);
-                e.pre('test', noop);
-                const m = e._middlewares.get('test');
-                m._fns.length.should.be.eql(2);
+            it('should work when passing single function', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                mc.pre(noop);
+                mc._middlewares.get('test1')._pres.length.should.be.eql(1);
+                mc._middlewares.get('test1')._fns.length.should.be.eql(2);
+                mc._middlewares.get('test2')._pres.length.should.be.eql(1);
+                mc._middlewares.get('test2')._fns.length.should.be.eql(2);
             });
 
-            it('should work when passing single eventName and fn array', function() {
-                const e = new EventEmitter();
-                e.on('test', noop);
-                e.pre('test', [noop, noop]);
-                const m = e._middlewares.get('test');
-                m._fns.length.should.be.eql(3);
-            });
-
-            it('should work when passing eventName array and single fn', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.pre(['test1', 'test2'], noop);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(2);
-                m2._fns.length.should.be.eql(2);
-            });
-
-            it('should work when passing eventName array and fn array', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.pre(['test1', 'test2'], [noop, noop]);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(3);
-                m2._fns.length.should.be.eql(3);
-            });
-
-            it('throw error when eventName not found', function(done) {
-                const e = new EventEmitter();
-                try {
-                    e.pre('test', noop);
-                } catch (err) {
-                    err.should.be.instanceof(Error);
-                    err.message.should.be.eql('eventName test not found');
-                    done();
-                }
+            it('should work when passing function array', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                mc.pre([noop, noop]);
+                mc._middlewares.get('test1')._pres.length.should.be.eql(2);
+                mc._middlewares.get('test1')._fns.length.should.be.eql(3);
+                mc._middlewares.get('test2')._pres.length.should.be.eql(2);
+                mc._middlewares.get('test2')._fns.length.should.be.eql(3);
             });
         });
 
         describe('post', function() {
-            it('should work when passing single eventName and single fn', function() {
-                const e = new EventEmitter();
-                e.on('test', noop);
-                e.post('test', noop);
-                const m = e._middlewares.get('test');
-                m._fns.length.should.be.eql(2);
+            it('should work when passing single function', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                mc.post(noop);
+                mc._middlewares.get('test1')._posts.length.should.be.eql(1);
+                mc._middlewares.get('test1')._fns.length.should.be.eql(2);
+                mc._middlewares.get('test2')._posts.length.should.be.eql(1);
+                mc._middlewares.get('test2')._fns.length.should.be.eql(2);
             });
 
-            it('should work when passing single eventName and fn array', function() {
-                const e = new EventEmitter();
-                e.on('test', noop);
-                e.post('test', [noop, noop]);
-                const m = e._middlewares.get('test');
-                m._fns.length.should.be.eql(3);
-            });
-
-            it('should work when passing eventName array and single fn', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.post(['test1', 'test2'], noop);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(2);
-                m2._fns.length.should.be.eql(2);
-            });
-
-            it('should work when passing eventName array and fn array', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.post(['test1', 'test2'], [noop, noop]);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(3);
-                m2._fns.length.should.be.eql(3);
-            });
-
-            it('throw error when eventName not found', function(done) {
-                const e = new EventEmitter();
-                try {
-                    e.post('test', noop);
-                } catch (err) {
-                    err.should.be.instanceof(Error);
-                    err.message.should.be.eql('eventName test not found');
-                    done();
-                }
+            it('should work when passing function array', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                mc.post(noop);
+                mc._middlewares.get('test1')._posts.length.should.be.eql(1);
+                mc._middlewares.get('test1')._fns.length.should.be.eql(2);
+                mc._middlewares.get('test2')._posts.length.should.be.eql(1);
+                mc._middlewares.get('test2')._fns.length.should.be.eql(2);
             });
         });
 
-        describe('preEach', function() {
-            it('should work when passing single fn', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.preEach(noop);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(2);
-                m2._fns.length.should.be.eql(2);
+        describe('select', function() {
+            it('should return new instance when eventNames in all eventNames', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                const nmc = mc.select(['test1']);
+                nmc.should.be.instanceof(MiddlewareCollection);
+                nmc.eventNames().should.be.deepEqual(['test1']);
             });
 
-            it('should work when passing fn array', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.preEach([noop, noop]);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(3);
-                m2._fns.length.should.be.eql(3);
-            });
-        });
-
-        describe('postEach', function() {
-            it('should work when passing single fn', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.postEach(noop);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(2);
-                m2._fns.length.should.be.eql(2);
+            it('should return new instance when some eventNames in all eventNames', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                const nmc = mc.select(['test1', 'test3']);
+                nmc.should.be.instanceof(MiddlewareCollection);
+                nmc.eventNames().should.be.deepEqual(['test1']);
             });
 
-            it('should work when passing fn array', function() {
-                const e = new EventEmitter();
-                e.on('test1', noop);
-                e.on('test2', noop);
-                e.postEach([noop, noop]);
-                const m1 = e._middlewares.get('test1');
-                const m2 = e._middlewares.get('test2');
-                m1._fns.length.should.be.eql(3);
-                m2._fns.length.should.be.eql(3);
+            it('should return empty instance when eventNames not in all eventNames', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test1', noop);
+                mc.new('test2', noop);
+                const nmc = mc.select(['test3']);
+                nmc.empty().should.be.True();
             });
         });
 
-        describe('emit', function() {
-            it('should work with default options', function(done) {
-                const e = new EventEmitter();
-                e.on('test', function(value1, value2, next) {
-                    next(null, value1 + 1, value2 + 1);
-                });
-                e.pre('test', function(value1, value2, next) {
-                    next(null, value1 + 1, value2 + 1);
-                });
-                e.post('test', function(value1, value2, next) {
-                    try {
-                        value1.should.be.eql(2);
-                        value2.should.be.eql(3);
-                        done();
-                    } catch (err) {
-                        done(err);
-                    }
-                });
-                e.emit('test', 0, 1);
+        describe('remove', function() {
+
+        });
+
+        describe('clear', function() {
+
+        });
+
+        describe('has', function() {
+            it('should return false if event not exists', function() {
+                const mc = new MiddlewareCollection();
+                mc.has('test').should.be.False();
             });
 
-            it('should work when setting globalArgs to true', function(done) {
-                const e = new EventEmitter({
-                    middleware: {
-                        globalArgs: true
-                    }
-                });
-                e.on('test', function(_g, next) {
-                    _g.value += 1;
-                    next();
-                });
-                e.pre('test', function(_g, next) {
-                    _g.value += 1;
-                    next();
-                });
-                e.post('test', function(_g, next) {
-                    try {
-                        _g.value.should.be.eql(2);
-                        done();
-                    } catch (err) {
-                        done(err);
-                    }
-                });
-                e.emit('test', {value: 0});
-            });
-
-            it('should work when setting multiArgs to false', function(done) {
-                const e = new EventEmitter({
-                    middleware: {
-                        multiArgs: false
-                    }
-                });
-                e.on('test', function(value, next) {
-                    next(null, value + 1);
-                });
-                e.pre('test', function(value, next) {
-                    next(null, value + 1);
-                });
-                e.post('test', function(value, next) {
-                    try {
-                        value.should.be.eql(2);
-                        next.should.be.Function();
-                        done();
-                    } catch (err) {
-                        done(err);
-                    }
-                });
-                e.emit('test', 0, 1);
+            it('should return true if event exists', function() {
+                const mc = new MiddlewareCollection();
+                mc.new('test', noop);
+                mc.has('test').should.be.True();
             });
         });
 
         describe('onError', function() {
             it('should catch listener error', function(done) {
-                const e1 = new EventEmitter();
-                e1.on('test', function() {
-                    throw new Error('error');
-                });
-                
-                const e2 = new EventEmitter();
-                e2.on('test', function() {
-                    throw new Error('error');
-                });
-                
-                e1.onError('test', function(err) {
-                    try {
-                        err.should.be.instanceof(Error);
-                        err.message.should.be.eql('error');
-                        e2.emit();
-                    } catch (err) {
-                        done(err);
-                    }
-                });
-                
-                e2.onError('test', function(err) {
-                    try {
-                        err.should.be.instanceof(Error);
-                        err.message.should.be.eql('error');
-                        done();
-                    } catch (err) {
-                        done(err);
-                    }
-                });
-                
-                e1.emit('test');
+                done();
             });
-            
-            it('should catch pre function error', function() {
-                const e = new EventEmitter();
-                e.onError('test', function(err) {
-                    err.should.be.instanceof(Error);
-                    err.message.should.be.eql('error');
-                    done();
-                });
-                e.on('test', noop);
-                e.pre('test', function() {
-                    throw new Error('error');
-                });
-                e.emit('test');
+
+            it('should catch pre function error', function(done) {
+                done();
             });
-            
-            it('should catch post function error', function() {
-                const e = new EventEmitter();
-                e.onError('test', function(err) {
-                    err.should.be.instanceof(Error);
-                    err.message.should.be.eql('error');
-                    done();
-                });
-                e.on('test', function() {
-                    return Promise.resolve();
-                });
-                e.post('test', function() {
-                    throw new Error('error');
-                });
-                e.emit('test');
+
+            it('should catch post function error', function(done) {
+                done();
             });
         });
 
         describe('method chaining', function() {
             it('should work', function() {
-                const e = new EventEmitter();
-                e.on('test', noop).should.be.eql(e);
-                e.pre('test', noop).should.be.eql(e);
-                e.post('test', noop).should.be.eql(e);
-                e.preEach(noop).should.be.eql(e);
-                e.postEach(noop).should.be.eql(e);
-                e.onError(noop).should.be.eql(e);
+                const mc = new MiddlewareCollection();
+                mc.pre(noop).should.be.eql(mc);
+                mc.post(noop).should.be.eql(mc);
+                mc.onError(noop).should.be.eql(mc);
+                mc.setOptions({}).should.be.eql(mc);
+                mc.remove().should.be.eql(mc);
+                mc.clear().should.be.eql(mc);
+            });
+        });
+    });
+
+    describe('EventEmitter', function() {
+        describe('setOptions', function() {
+            it('should work', function() {});
+            it('should be equivalent to setting options by constructor method', function() {});
+        });
+
+        describe('middleware', function() {
+        });
+
+        describe('emit', function() {
+            it('should work with default options', function(done) {
+                done();
+            });
+
+            it('should work when setting globalArgs to true', function(done) {
+                done();
+            });
+
+            it('should work when setting multiArgs to false', function(done) {
+                done();
             });
         });
     });
