@@ -127,7 +127,7 @@ class EventEmitter extends _EventEmitter {
         return this._middlewares.has(eventName);
     }
     
-    on(eventName, listener, options) {
+    addListener(eventName, listener, options) {
         if (this.eventNames().includes(eventName)) {
             throw Error(`eventName ${eventName} has added`);
         }
@@ -135,6 +135,10 @@ class EventEmitter extends _EventEmitter {
                                                options || this._options.middleware || {});
         this._middlewares.set(eventName, middleware);
         return super.on(eventName, callable(middleware));
+    }
+    
+    on(...args) {
+        return this.addListener(...args);
     }
     
     once(eventName, listener, options) {
