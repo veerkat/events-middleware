@@ -412,6 +412,11 @@ describe('events-middleware', function() {
     });
 
     describe('EventEmitter', function() {
+        describe('setOptions', function() {
+            it('should work', function() {});
+            it('should be equivalent to setting options by constructor method', function() {});
+        });
+        
         describe('on', function() {
             it('should work', function() {
                 const e = new EventEmitter();
