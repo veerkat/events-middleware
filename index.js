@@ -110,11 +110,11 @@ class EventMiddleware {
     }
 }
 
-class MiddlewareManager {
-    constructor(options = {}) {
-        this._middlewares = new Map();
+class MiddlewareCollection {
+    constructor(options = {}, middlewares) {
+        this._middlewares = middlewares || new Map();
         
-        this._options = options;
+        this.setOptions(options);
     }
     
     setOptions(options) {
@@ -130,28 +130,15 @@ class MiddlewareManager {
         this._middlewares.set(eventName, middleware);
         return middleware;
     }
-
-    onError(eventNames, callback) {
-        if (callback === undefined) {
-            callback = eventNames;
-            this._eachMiddleware('catch', callback);
-        } else {
-            this._callMiddlewares('catch', eventNames, callback);
-        }
-        return this;
+    
+    select(eventNames) {
+        const middlewares;
+        return new MiddlewareCollection(this._options, middlewares);
     }
 
-    _callMiddlewares(method, eventNames, ...args) {
-        if (!Array.isArray(eventNames)) {
-            eventNames = [eventNames];
-        }
-        eventNames.forEach(eventName => {
-            const middleware = this._middlewares.get(eventName);
-            if (!middleware) {
-                throw new Error(`eventName ${eventName} not found`);
-            }
-            return middleware[method](...args);
-        });
+    onError(callback) {
+        this._eachMiddleware('catch', callback);
+        return this;
     }
 
     _eachMiddleware(method, ...args) {
@@ -160,22 +147,12 @@ class MiddlewareManager {
         }
     }
     
-    pre(eventNames, fns) {
-        this._callMiddlewares('pre', eventNames, fns);
-        return this;
-    }
-
-    preEach(fns) {
+    pre(fns) {
         this._eachMiddleware('pre', fns);
         return this;
     }
 
-    post(eventNames, fns) {
-        this._callMiddlewares('post', eventNames, fns);
-        return this;
-    }
-
-    postEach(fns) {
+    post(fns) {
         this._eachMiddleware('post', fns);
         return this;
     }
@@ -188,7 +165,7 @@ class MiddlewareManager {
 class EventEmitter extends _EventEmitter {
     constructor(options = {}) {
         super();
-        this._middlewares = new MiddlewareManager();
+        this._middlewares = new MiddlewareCollection();
         this.setOptions(options);
     }
 
@@ -201,14 +178,18 @@ class EventEmitter extends _EventEmitter {
         if (!eventName) {
             return this._middlewares;
         }
-
+        if (!listener) {
+            return this._middlewares.select(eventName);
+        }
+        
         const middleware = this._middlewares.new(eventName, listener, options);
         super.on(eventName, callable(middleware));
-        return this._middlewares;
+        return this._middlewares.select(eventName);
     }
 }
 
 module.exports = {
     EventMiddleware,
+    MiddlewareCollection,
     EventEmitter
 };
