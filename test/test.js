@@ -413,7 +413,8 @@ describe('events-middleware', function() {
 
     describe('EventEmitter', function() {
         describe('setOptions', function() {
-            it('should work', function() {});
+            it('should work', function() {
+            });
             it('should be equivalent to setting options by constructor method', function() {});
         });
         
@@ -693,9 +694,69 @@ describe('events-middleware', function() {
         });
 
         describe('onError', function() {
-            it('should catch listener error', function() {});
-            it('should catch pre function error', function() {});
-            it('should catch post function error', function() {});
+            it('should catch listener error', function(done) {
+                const e1 = new EventEmitter();
+                e1.on('test', function() {
+                    throw new Error('error');
+                });
+                
+                const e2 = new EventEmitter();
+                e2.on('test', function() {
+                    throw new Error('error');
+                });
+                
+                e1.onError('test', function(err) {
+                    try {
+                        err.should.be.instanceof(Error);
+                        err.message.should.be.eql('error');
+                        e2.emit();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                
+                e2.onError('test', function(err) {
+                    try {
+                        err.should.be.instanceof(Error);
+                        err.message.should.be.eql('error');
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                
+                e1.emit('test');
+            });
+            
+            it('should catch pre function error', function() {
+                const e = new EventEmitter();
+                e.onError('test', function(err) {
+                    err.should.be.instanceof(Error);
+                    err.message.should.be.eql('error');
+                    done();
+                });
+                e.on('test', noop);
+                e.pre('test', function() {
+                    throw new Error('error');
+                });
+                e.emit('test');
+            });
+            
+            it('should catch post function error', function() {
+                const e = new EventEmitter();
+                e.onError('test', function(err) {
+                    err.should.be.instanceof(Error);
+                    err.message.should.be.eql('error');
+                    done();
+                });
+                e.on('test', function() {
+                    return Promise.resolve();
+                });
+                e.post('test', function() {
+                    throw new Error('error');
+                });
+                e.emit('test');
+            });
         });
 
         describe('method chaining', function() {
