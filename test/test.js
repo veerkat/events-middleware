@@ -419,6 +419,26 @@ describe('events-middleware', function() {
                 e._middlewares.get('test').should.be.instanceof(EventMiddleware);
                 e.eventNames().includes('test').should.be.True();
             });
+            
+            it('should set middleware options by on method', function() {
+                const options = {
+                    
+                };
+                const e = new EventEmitter();
+                e.on('test', noop, options);
+                e._middlewares.get('test')._options.should.be.deelEqual(options);
+            });
+            
+            it('should set middleware options by constructor method', function() {
+                const options = {
+                    
+                };
+                const e = new EventEmitter({
+                    middleware: options
+                });
+                e.on('test', noop);
+                e._middlewares.get('test')._options.should.be.deelEqual(options);
+            });
 
             it('throw error if eventName has added', function(done) {
                 const e = new EventEmitter();
@@ -617,7 +637,7 @@ describe('events-middleware', function() {
                 e.emit('test', 0, 1);
             });
 
-            it('should work when globalArgs is true', function(done) {
+            it('should work when setting globalArgs to true', function(done) {
                 const e = new EventEmitter({
                     middleware: {
                         globalArgs: true
@@ -640,10 +660,9 @@ describe('events-middleware', function() {
                     }
                 });
                 e.emit('test', {value: 0});
-
             });
 
-            it('should work when multiArgs is false', function(done) {
+            it('should work when setting multiArgs to false', function(done) {
                 const e = new EventEmitter({
                     middleware: {
                         multiArgs: false
@@ -669,7 +688,9 @@ describe('events-middleware', function() {
         });
 
         describe('onError', function() {
-            it('', function() {});
+            it('should catch listener error', function() {});
+            it('should catch pre function error', function() {});
+            it('should catch post function error', function() {});
         });
 
         describe('method chaining', function() {
