@@ -110,55 +110,15 @@ class EventMiddleware {
     }
 }
 
-class EventEmitter extends _EventEmitter {
+class MiddlewareManager {
     constructor(options = {}) {
-        super();
-
         this._middlewares = new Map();
-
+        
         this._options = options;
     }
-
+    
     setOptions(options) {
         this._options = options;
-    }
-
-    has(eventName) {
-        return this._middlewares.has(eventName);
-    }
-    
-    addListener(eventName, listener, options) {
-        if (this.eventNames().includes(eventName)) {
-            throw Error(`eventName ${eventName} has added`);
-        }
-        const middleware = new EventMiddleware(eventName, listener,
-                                               options || this._options.middleware || {});
-        this._middlewares.set(eventName, middleware);
-        return super.on(eventName, callable(middleware));
-    }
-    
-    on(...args) {
-        return this.addListener(...args);
-    }
-    
-    once(eventName, listener, options) {
-        
-    }
-    
-    remove(eventNames) {
-        
-    }
-    
-    removeListener(eventNames) {
-        
-    }
-    
-    removeAll() {
-        
-    }
-    
-    removeAllListeners(eventNames) {
-        
     }
 
     onError(eventNames, callback) {
@@ -189,7 +149,7 @@ class EventEmitter extends _EventEmitter {
             middleware[method](...args);
         }
     }
-
+    
     pre(eventNames, fns) {
         this._callMiddlewares('pre', eventNames, fns);
         return this;
@@ -208,6 +168,34 @@ class EventEmitter extends _EventEmitter {
     postEach(fns) {
         this._eachMiddleware('post', fns);
         return this;
+    }
+    
+    has(eventName) {
+        return this._middlewares.has(eventName);
+    }
+}
+
+class EventEmitter extends _EventEmitter {
+    constructor(options = {}) {
+        super();
+        
+        this._middlewares = new MiddlewareManager(options.middleware || {});
+
+        this._options = options;
+    }
+
+    setOptions(options) {
+        this._options = options;
+    }
+
+    middleware(eventName, listener, options) {
+        if (this.eventNames().includes(eventName)) {
+            throw Error(`eventName ${eventName} has added`);
+        }
+        const middleware = new EventMiddleware(eventName, listener,
+                                               options || this._options.middleware || {});
+        this._middlewares.set(eventName, middleware);
+        return super.on(eventName, callable(middleware));
     }
 }
 
