@@ -276,6 +276,13 @@ describe('events-middleware', function() {
         });
 
         describe('catch', function() {
+            it('should set _onError callback', function() {
+                const m = new EventMiddleware('test', noop);
+                const callback = function() {};
+                m.catch(callback);
+                m._onError.should.be.equal(callback);
+            });
+
             it('should catch main function error', function(done) {
                 const m1 = new EventMiddleware('test', next => {
                     throw new Error('error');
@@ -415,10 +422,10 @@ describe('events-middleware', function() {
         describe('method chaining', function() {
             it('should work', function() {
                 const m = new EventMiddleware('test', noop);
-                m.pre(noop).should.be.eql(m);
-                m.post(noop).should.be.eql(m);
-                m.catch(noop).should.be.eql(m);
-                m.setOptions({}).should.be.eql(m);
+                m.pre(noop).should.be.equal(m);
+                m.post(noop).should.be.equal(m);
+                m.catch(noop).should.be.equal(m);
+                m.setOptions({}).should.be.equal(m);
             });
         });
     });
@@ -650,67 +657,176 @@ describe('events-middleware', function() {
         });
 
         describe('onError', function() {
-            it('should catch listener error', function(done) {
-                done();
+            it('should bind onError callable by sub collection', function() {
+                const mc = new MiddlewareCollection();
+                const callback = function() {};
+                const m1 = mc.new('test1', noop);
+                const m2 = mc.new('test2', noop);
+                const m3 = mc.new('test3', noop);
+                mc.select(['test1', 'test2']).onError(callback);
+                m1._onError.should.be.equal(callback);
+                m2._onError.should.be.equal(callback);
+                m3._onError.should.not.be.equal(callback);
             });
 
-            it('should catch pre function error', function(done) {
-                done();
-            });
-
-            it('should catch post function error', function(done) {
-                done();
+            it('should bind onError callable for all middlewares', function() {
+                const mc = new MiddlewareCollection();
+                const callback = function() {};
+                const m1 = mc.new('test1', noop);
+                const m2 = mc.new('test2', noop);
+                mc.onError(callback);
+                m1._onError.should.be.equal(callback);
+                m2._onError.should.be.equal(callback);
             });
         });
 
         describe('method chaining', function() {
             it('should work', function() {
                 const mc = new MiddlewareCollection();
-                mc.pre(noop).should.be.eql(mc);
-                mc.post(noop).should.be.eql(mc);
-                mc.onError(noop).should.be.eql(mc);
-                mc.setOptions({}).should.be.eql(mc);
-                mc.remove().should.be.eql(mc);
-                mc.clear().should.be.eql(mc);
+                mc.pre(noop).should.be.equal(mc);
+                mc.post(noop).should.be.equal(mc);
+                mc.onError(noop).should.be.equal(mc);
+                mc.setOptions({}).should.be.equal(mc);
+                mc.remove().should.be.equal(mc);
+                mc.clear().should.be.equal(mc);
             });
         });
     });
 
     describe('EventEmitter', function() {
         describe('setOptions', function() {
+            const middlewareOptions = {
+                multiArgs: false,
+                globalArgs: true
+            };
             const options = {
-                middleware: {
-                    multiArgs: false,
-                    globalArgs: true
-                }
+                middleware: middlewareOptions
             };
             it('should work', function() {
                 const e = new EventEmitter();
                 e.setOptions(options);
                 e._options.should.be.deepEqual(options);
+                e._middlewares._options.should.be.deepEqual(middlewareOptions);
             });
+
             it('should be equivalent to setting options by constructor method', function() {
                 const e1 = new EventEmitter(options);
-                const e2 = new MiddlewareCollection();
+                const e2 = new EventEmitter();
                 e2.setOptions(options);
                 e2._options.should.be.deepEqual(e1._options);
+                e2._middlewares._options.should.be.deepEqual(e1._middlewares._options);
             });
         });
 
         describe('middleware', function() {
+            it('should new middleware and return sub middleware collection ', function() {
+                const e = new EventEmitter();
+                const mc = e.middleware('test', noop);
+                mc.should.be.instanceof(MiddlewareCollection);
+                mc.eventNames().should.be.eql(['test']);
+            });
+
+            it('should return middleware collection when passing no args', function() {
+                const e = new EventEmitter();
+                e.middleware('test1', noop);
+                e.middleware('test2', noop);
+                const mc = e.middleware();
+                mc.should.be.instanceof(MiddlewareCollection);
+                mc.eventNames().should.be.eql(['test1', 'test2']);
+            });
+
+            it('should return sub middleware collection when passing eventName', function() {
+                const e = new EventEmitter();
+                e.middleware('test1', noop);
+                e.middleware('test2', noop);
+                const mc1 = e.middleware('test1');
+                mc1.should.be.instanceof(MiddlewareCollection);
+                mc1.eventNames().should.be.eql(['test1']);
+                const mc2 = e.middleware(['test1']);
+                mc2.should.be.instanceof(MiddlewareCollection);
+                mc2.eventNames().should.be.eql(['test1']);
+            });
         });
 
         describe('emit', function() {
             it('should work with default options', function(done) {
-                done();
+                const e = new EventEmitter();
+                e.middleware('test', (value1, value2, next) => {
+                    next(null, value1 + 1, value2 + 1);
+                }).pre((value1, value2, next) => {
+                    next(null, value1 + 1, value2 + 1);
+                }).post((value1, value2, next) => {
+                    try {
+                        value1.should.be.eql(2);
+                        value2.should.be.eql(3);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                e.emit('test', 0, 1);
             });
 
             it('should work when setting globalArgs to true', function(done) {
-                done();
+                const e = new EventEmitter({
+                    middleware: {
+                        globalArgs: true
+                    }
+                });
+                e.middleware('test', (g, next) => {
+                    g.value += 1;
+                    next();
+                }).pre((g, next) => {
+                    g.value += 1;
+                    next();
+                }).post((g, next) => {
+                    try {
+                        g.value.should.be.eql(2);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                e.emit('test', {
+                    value: 0
+                });
             });
 
             it('should work when setting multiArgs to false', function(done) {
-                done();
+                const e = new EventEmitter({
+                    middleware: {
+                        multiArgs: false
+                    }
+                });
+                e.middleware('test', (value, next) => {
+                    next(null, value + 1, 1);
+                }).pre((value, next) => {
+                    next(null, value + 1, 1);
+                }).post((value, next) => {
+                    try {
+                        value.should.be.eql(2);
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
+                e.emit('test', 0, 1);
+            });
+
+            it('should catch error by middleware collection onError', function(done) {
+                const e = new EventEmitter();
+                e.middleware('test', next => {
+                    throw new Error('error');
+                }).onError(err => {
+                    try {
+                        err.should.be.instanceof(Error);
+                        err.message.should.be.eql('error');
+                        done();
+                    } catch(_err) {
+                        done(_err);
+                    }
+                });
+                e.emit('test');
             });
         });
     });
