@@ -27,5 +27,8 @@
   "bugs": {
     "url": "https://github.com/veerkat/events-middleware/issues"
   },
-  "homepage": "https://github.com/veerkat/events-middleware#readme"
+  "homepage": "https://github.com/veerkat/events-middleware#readme",
+  "engines": {
+    "node":">=6.0.0"
+  }
 }
