@@ -107,8 +107,8 @@ e.middleware(['test', 'test1']).clear();
 ```
 
 options
-- `globalArgs`: (default: false) 
-- `multiArgs`: (default: true)
+- `globalArgs`: (default: false) enable or disable every middleware function get same values which emit passed
+- `multiArgs`: (default: true) enable or disable middleware function pass multiple values to next middleware function
 
 ```js
 const options = {
