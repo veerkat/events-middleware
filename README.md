@@ -42,7 +42,7 @@ pre or post
 const fn = function(value1, value2, next) {
     next(null, value1, value2);
 };
-// if eventName test has added
+// if eventName 'test' has added
 e.middleware('test').pre(fn).post(fn);
 
 // or not
@@ -54,7 +54,7 @@ const promiseFn = function(value) {
 }; 
 e.middleware('test2', promiseFn).pre(promiseFn).post(promiseFn);
 
-// multiple pres or posts
+// multiple pre fns or post fns
 e.middleware('test').pre(fn).pre(fn);
 e.middleware('test').pre([fn, fn]);
 
@@ -107,8 +107,8 @@ e.middleware(['test', 'test1']).clear();
 ```
 
 options
-- `globalArgs`: (default: false) enable or disable every middleware function get same values which emit passed
-- `multiArgs`: (default: true) enable or disable middleware function pass multiple values to next middleware function
+- `globalArgs`: (default: false) set to true to let every middleware function receive the values which emit method passed
+- `multiArgs`: (default: true) enable or disable middleware function to pass multiple values to next middleware function
 
 ```js
 const options = {
