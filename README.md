@@ -126,8 +126,11 @@ e1.setOptions({
 e1.middleware().setOptions(options);
 // or when new middleware
 e1.middleware('test', fn, options);
+```
 
-// globalArgs is true
+`globalArgs` is `true`
+
+```js
 e1.middleware('test1', function(g, next) {
     console.log(g.value); // => 1;
     g.value += 1;
@@ -143,8 +146,11 @@ e1.middleware('test1', function(g, next) {
     next();
 });
 e1.emit('test1', {value: 0});
+```
 
-// multiArgs is false
+`multiArgs` is `false`
+
+```js
 e1.middleware('test2', function(value, next) {
     // just get first value from pre fn
     next(null, value);
