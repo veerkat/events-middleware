@@ -48,7 +48,7 @@ e.middleware('test').pre(fn).post(fn);
 // or not
 e.middleware('test1', fn).pre(fn).post(fn);
 
-// using promise
+// use promise
 const promiseFn = function(value) {
     return Primise.resolve(value);
 }; 
@@ -104,6 +104,56 @@ e.middleware().clear(); // clear all
 
 // being equivalent to e.middleware().remove(['test', 'test1'])
 e.middleware(['test', 'test1']).clear();
+```
+
+options
+- `globalArgs`: (default: false) 
+- `multiArgs`: (default: true)
+
+```js
+const options = {
+    globalArgs: false,
+    multiArgs: true
+}
+const e1 = new EventEmitter({
+    middleware: options
+});
+// or
+e1.setOptions({
+    middleware: options
+});
+// or by middleware collection
+e1.middleware().setOptions(options);
+// or when new middleware
+e1.middleware('test', fn, options);
+
+// globalArgs is true
+e1.middleware('test1', function(g, next) {
+    console.log(g.value); // => 1;
+    g.value += 1;
+    next();
+}, {
+    globalArgs: true
+}).pre(function(g, next) {
+    console.log(g.value); // => 0;
+    g.value += 1;
+    next();
+}).post(function(g, next) {
+    console.log(g.value); // => 2;
+    next();
+});
+e1.emit('test1', {value: 0});
+
+// multiArgs is false
+e1.middleware('test2', function(value, next) {
+    // just get first value from pre fn
+    next(null, value);
+}, {
+    multiArgs: false
+}).pre(function(value, next) {
+    next(null, value, 1); // return two values but pass first value to next
+});
+e1.emit('test2', 0);
 ```
 
 # License
