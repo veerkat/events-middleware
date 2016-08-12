@@ -128,7 +128,7 @@ e1.middleware().setOptions(options);
 e1.middleware('test', fn, options);
 ```
 
-`globalArgs` is `true`
+option `globalArgs` is `true`
 
 ```js
 e1.middleware('test1', function(g, next) {
@@ -148,7 +148,7 @@ e1.middleware('test1', function(g, next) {
 e1.emit('test1', {value: 0});
 ```
 
-`multiArgs` is `false`
+option `multiArgs` is `false`
 
 ```js
 e1.middleware('test2', function(value, next) {
