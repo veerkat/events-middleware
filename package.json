@@ -1,6 +1,6 @@
 {
   "name": "events-middleware",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "event middleware for EventEmitter",
   "main": "index.js",
   "dependencies": {},
@@ -26,6 +26,6 @@
   },
   "homepage": "https://github.com/veerkat/events-middleware#readme",
   "engines": {
-    "node":">=6.0.0"
+    "node": ">=6.0.0"
   }
 }
