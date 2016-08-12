@@ -25,13 +25,13 @@ e.middleware('test', function(value1, value2, next) {
 });
 ```
 
-select event
+select eventNames
 
 ```js
-// return all middleware collection
+// all middleware collection
 e.middleware();
 
-// return selected middleware collection
+// selected middleware collection
 e.middleware('test');
 e.middleware(['test']);
 ```
@@ -48,7 +48,7 @@ e.middleware('test').pre(fn).post(fn);
 // or not
 e.middleware('test1', fn).pre(fn).post(fn);
 
-// use promise
+// using promise
 const promiseFn = function(value) {
     return Primise.resolve(value);
 }; 
@@ -66,6 +66,15 @@ e.middleware(['test', 'test1']).pre(fn);
 catch error
 
 ```js
+// middleware fn
+const fn = function(value1, value2, next) {
+    next('return error');
+};
+// or promise
+const promiseFn = function(value1, value2) {
+    return Promise.reject('return error');
+};
+
 const onerror = function(err) {
     console.log(err);
 };
@@ -92,6 +101,8 @@ clear
 
 ```js
 e.middleware().clear(); // clear all
+
+// being equivalent to e.middleware().remove(['test', 'test1'])
 e.middleware(['test', 'test1']).clear();
 ```
 
