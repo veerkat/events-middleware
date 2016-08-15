@@ -5,7 +5,7 @@ const _EventEmitter = require('events');
 
 function callable(instance) {
     return function(...args) {
-        instance.call.apply(instance, args);
+        instance.call(...args);
     };
 }
 
