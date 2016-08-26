@@ -107,8 +107,10 @@ e.middleware(['test', 'test1']).clear();
 ```
 
 options
-- `globalArgs`: (default: false) set to true to let every middleware function receive the values which emit method passed
+- `globalArgs`: (default: false) set to true to let every middleware function accept the values which emit method passed
 - `multiArgs`: (default: true) enable or disable middleware function to pass multiple values to next middleware function
+- `postMiddleware`: (default: true) enable or disable post middlewares
+- `onlyPromise`: (default: false) enable or disable next callback in middleware function
 
 ```js
 const options = {
@@ -158,6 +160,36 @@ e1.middleware('test2', function(value, next) {
     multiArgs: false
 }).pre(function(value, next) {
     next(null, value, 1); // return two values but pass first value to next
+});
+e1.emit('test2', 0);
+```
+
+option `postMiddleware` is `false`
+
+```js
+e1.middleware('test3', function(value, next) {
+    next(null, value);
+}, {
+    postMiddleware: false
+}).pre(function(value, next) {
+    next(null, value);
+}).post(function() {
+    // not to be called
+});
+e1.emit('test2', 0);
+```
+
+option `onlyPromise` is `true`
+
+```js
+e1.middleware('test4', function(value, next) {
+    // next is undefined
+    console.log(value); // value => 1
+}, {
+    onlyPromise: true
+}).pre(function(value, next) {
+   // next is undefined
+   return Promise.resolve(value + 1);
 });
 e1.emit('test2', 0);
 ```
