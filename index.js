@@ -9,7 +9,7 @@ function callable(instance) {
     };
 }
 
-function wrapPromise(fn) {
+function promiseWrapperWithCb(fn) {
     return function(...args) {
         return new Promise((resolve, reject) => {
             const cb = function(err, ...value) {
@@ -22,6 +22,21 @@ function wrapPromise(fn) {
             const promise = fn.apply(this, [...args, cb]);
             if (Promise.resolve(promise) == promise) {
                 promise.then((...value) => resolve(value)).catch(reject);
+            } else if (promise !== undefined) {
+                resolve([promise]);
+            }
+        });
+    };
+}
+
+function promiseWrapper(fn) {
+    return function(...args) {
+        return new Promise((resolve, reject) => {
+            const promise = fn.apply(this, args);
+            if (Promise.resolve(promise) == promise) {
+                promise.then((...value) => resolve(value)).catch(reject);
+            } else if (promise !== undefined) {
+                resolve([promise]);
             }
         });
     };
@@ -29,20 +44,26 @@ function wrapPromise(fn) {
 
 class EventMiddleware {
     constructor(eventName, fn, options = {}) {
-        this._pres = [];
-        this._posts = [];
         this._options = {
             globalArgs: false,
-            multiArgs: true
+            multiArgs: true,
+            postMiddleware: true,
+            onlyPromise: false
         };
+
+        this.eventName = eventName;
+        this._main = fn;
+        this.setOptions(options);
+
         this._onError = function(err) {
             return Promise.reject(err);
         };
 
-        this.eventName = eventName;
-        this._main = wrapPromise(fn);
-        this.setOptions(options);
-        this._compose();
+        this._done = function() {};
+        this._pres = [];
+        this._posts = [];
+
+        this.compose();
     }
 
     _initOptions(options) {
@@ -51,7 +72,9 @@ class EventMiddleware {
         };
         return {
             globalArgs: getBoolOption(options, 'globalArgs'),
-            multiArgs: getBoolOption(options, 'multiArgs')
+            multiArgs: getBoolOption(options, 'multiArgs'),
+            postMiddleware: getBoolOption(options, 'postMiddleware'),
+            onlyPromise: getBoolOption(options, 'onlyPromise')
         };
     }
 
@@ -60,8 +83,17 @@ class EventMiddleware {
         return this;
     }
 
-    _compose() {
-        this._fns = this._pres.concat([this._main]).concat(this._posts);
+    compose() {
+        let wrapFn;
+        if (this._options.onlyPromise) {
+            wrapFn = promiseWrapper;
+        } else {
+            wrapFn = promiseWrapperWithCb;
+        }
+        this._fns = this._pres.map(preFn => wrapFn(preFn)).concat([wrapFn(this._main)]);
+        if (this._options.postMiddleware) {
+            this._fns = this._fns.concat(this._posts.map(postFn => wrapFn(postFn)));
+        }
     }
 
     catch (callback) {
@@ -69,12 +101,17 @@ class EventMiddleware {
         return this;
     }
 
+    done(callback) {
+        this._done = callback;
+        return this;
+    }
+
     _addFns(role, fns) {
         if (!Array.isArray(fns)) {
             fns = [fns];
         }
-        fns.forEach(fn => this[role].push(wrapPromise(fn)));
-        this._compose();
+        fns.forEach(fn => this[role].push(fn));
+        this.compose();
     }
 
     pre(fns) {
@@ -106,7 +143,7 @@ class EventMiddleware {
                 nextFn.apply(this, nextValue).then(next).catch(reject);
             };
             next(value);
-        }).catch(this._onError);
+        }).then(this._done).catch(this._onError);
     }
 }
 
