@@ -85,18 +85,18 @@ describe('events-middleware', function() {
                 const m1 = new EventMiddleware('test', function(value, next) {
                     next(null, value + 1);
                 });
+                m1.done(value => {
+                    value.should.be.eql(2);
+                });
                 const m2 = new EventMiddleware('test', function(value) {
                     return Promise.resolve(value + 1);
                 });
+                m2.done(value => {
+                    value.should.be.eql(2);
+                });
                 return Promise.all([
-                    m1.call(1)
-                    .then(value => {
-                        value.should.be.eql(2);
-                    }),
+                    m1.call(1),
                     m2.call(1)
-                    .then(value => {
-                        value.should.be.eql(2);
-                    })
                 ]);
             });
 
@@ -104,42 +104,48 @@ describe('events-middleware', function() {
                 const m = new EventMiddleware('test', function(value, next) {
                     next(null, value + 1);
                 });
+                m.done(value => {
+                    value.should.be.eql(4);
+                });
+
                 m.pre(function(value, next) {
                     next(null, value + 1);
                 });
                 m.post(function(value, next) {
                     next(null, value + 1);
                 });
-                return m.call(1).then(value => {
-                    value.should.be.eql(4);
-                });
+                return m.call(1);
             });
 
             it('should work with pre, main and post functions and default options by promise', function() {
                 const m = new EventMiddleware('test', function(value) {
                     return Promise.resolve(value + 1);
                 });
+                m.done(value => {
+                    value.should.be.eql(4);
+                });
+
                 m.pre(function(value) {
                     return Promise.resolve(value + 1);
                 });
                 m.post(function(value) {
                     return Promise.resolve(value + 1);
                 });
-                return m.call(1).then(value => {
-                    value.should.be.eql(4);
-                });
+                return m.call(1);
             });
 
             it('should pass multiple value with default options when using next callback', function() {
                 const m = new EventMiddleware('test', function(value1, value2, next) {
                     next(null, value1 + 1, value2 + 1);
                 });
+                m.done(value => {
+                    value.should.be.eql([3, 4]);
+                });
                 m.post(function(value1, value2, next) {
                     next(null, value1 + 1, value2 + 1);
                 });
-                return m.call(1, 2).then(value => {
-                    value.should.be.eql([3, 4]);
-                });
+                return m.call(1, 2);
+
             });
 
             it('should work when globalArgs is true', function() {
@@ -148,6 +154,10 @@ describe('events-middleware', function() {
                 }, {
                     globalArgs: true,
                 });
+                m.done(_g => {
+                    _g.should.be.deepEqual(g);
+                });
+
                 m.pre(function(g) {
                     g.value = g.value + 1;
                     return Promise.resolve();
@@ -159,9 +169,7 @@ describe('events-middleware', function() {
                 const g = {
                     value: 1
                 };
-                return m.call(g).then(_g => {
-                    _g.should.be.deepEqual(g);
-                });
+                return m.call(g);
             });
 
             it('should work when multiArgs is false', function() {
@@ -170,15 +178,57 @@ describe('events-middleware', function() {
                 }, {
                     multiArgs: false
                 });
+                m.done(value => {
+                    value.should.be.eql(4);
+                });
                 m.pre(function(value, next) {
                     return next(null, value + 1, 2, 3);
                 });
                 m.post(function(value, next) {
                     return next(null, value + 1, 2, 3);
                 });
-                return m.call(1, 2, 3).then(value => {
-                    value.should.be.eql(4);
+                return m.call(1, 2, 3);
+            });
+
+            it('should work when postMiddleware is false', function() {
+                const m = new EventMiddleware('test', function(value, next) {
+                    next(null, value + 1);
+                }, {
+                    postMiddleware: false
                 });
+                m.done(value => {
+                    value.should.be.eql(2);
+                });
+
+                m.pre(function(value, next) {
+                    return next(null, value + 1);
+                });
+                m.post(function(value, next) {
+                    return next(null, value + 1);
+                });
+                return m.call(0);
+            });
+
+            it('should work when onlyPromise is true', function() {
+                const m = new EventMiddleware('test', function(value, next) {
+                    should(next).be.undefined();
+                    return Promise.resolve(value + 1);
+                }, {
+                    onlyPromise: true
+                });
+                m.done(value => {
+                    value.should.be.eql(3);
+                });
+
+                m.pre(function(value, next) {
+                    should(next).be.undefined();
+                    return Promise.resolve(value + 1);
+                });
+                m.post(function(value, next) {
+                    should(next).be.undefined();
+                    return Promise.resolve(value + 1);
+                });
+                return m.call(0);
             });
 
             it('should catch error from pre function', function() {
@@ -434,7 +484,9 @@ describe('events-middleware', function() {
         describe('setOptions', function() {
             const options = {
                 multiArgs: false,
-                globalArgs: true
+                globalArgs: true,
+                postMiddleware: false,
+                onlyPromise: false
             };
             it('should work', function() {
                 const mc = new MiddlewareCollection();
@@ -453,7 +505,9 @@ describe('events-middleware', function() {
             it('should work with default options', function() {
                 const options = {
                     multiArgs: false,
-                    globalArgs: true
+                    globalArgs: true,
+                    postMiddleware: false,
+                    onlyPromise: false
                 };
                 const mc = new MiddlewareCollection(options);
                 const m = mc.new('test', noop);
@@ -465,7 +519,9 @@ describe('events-middleware', function() {
             it('should work when setting options', function() {
                 const options = {
                     multiArgs: false,
-                    globalArgs: true
+                    globalArgs: true,
+                    postMiddleware: false,
+                    onlyPromise: false
                 };
                 const mc = new MiddlewareCollection();
                 const m = mc.new('test', noop, options);
@@ -813,6 +869,47 @@ describe('events-middleware', function() {
                 e.emit('test', 0, 1);
             });
 
+            it('should work when setting postMiddleware to false', function(done) {
+                const e = new EventEmitter({
+                    middleware: {
+                        postMiddleware: false
+                    }
+                });
+                e.middleware('test', (value, next) => {
+                    next(null, value + 1);
+                }).pre((value, next) => {
+                    next(null, value + 1);
+                }).post((value, next) => {
+                    throw new Error('in post');
+                }).onError(done);
+
+                e.middleware()._middlewares.get('test').done(function(value) {
+                    value.should.be.eql(2);
+                    done();
+                });
+                e.emit('test', 0);
+            });
+
+            it('should work when setting onlyPromise to true', function(done) {
+                const e = new EventEmitter({
+                    middleware: {
+                        onlyPromise: true
+                    }
+                });
+                e.middleware('test', (value, next) => {
+                    should(next).be.undefined();
+                    return Promise.resolve(value + 1);
+                }).pre((value, next) => {
+                    should(next).be.undefined();
+                    return Promise.resolve(value + 1);
+                }).post((value, next) => {
+                    should(next).be.undefined();
+                    value.should.be.eql(2);
+                    done();
+                }).onError(done);
+                e.emit('test', 0);
+            });
+
             it('should catch error by middleware collection onError', function(done) {
                 const e = new EventEmitter();
                 e.middleware('test', next => {
@@ -822,7 +919,7 @@ describe('events-middleware', function() {
                         err.should.be.instanceof(Error);
                         err.message.should.be.eql('error');
                         done();
-                    } catch(_err) {
+                    } catch (_err) {
                         done(_err);
                     }
                 });
