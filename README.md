@@ -184,12 +184,11 @@ option `onlyPromise` is `true`
 ```js
 e1.middleware('test4', function(value, next) {
     // next is undefined
-    console.log(value); // value => 1
 }, {
     onlyPromise: true
 }).pre(function(value, next) {
    // next is undefined
-   return Promise.resolve(value + 1);
+   return Promise.resolve(value);
 });
 e1.emit('test4', 0);
 ```
