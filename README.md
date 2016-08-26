@@ -176,7 +176,7 @@ e1.middleware('test3', function(value, next) {
 }).post(function() {
     // not to be called
 });
-e1.emit('test2', 0);
+e1.emit('test3', 0);
 ```
 
 option `onlyPromise` is `true`
@@ -191,7 +191,7 @@ e1.middleware('test4', function(value, next) {
    // next is undefined
    return Promise.resolve(value + 1);
 });
-e1.emit('test2', 0);
+e1.emit('test4', 0);
 ```
 
 # License
