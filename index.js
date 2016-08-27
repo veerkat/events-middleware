@@ -96,7 +96,7 @@ class EventMiddleware {
         }
     }
 
-    catch (callback) {
+    catch(callback) {
         this._onError = callback;
         return this;
     }
