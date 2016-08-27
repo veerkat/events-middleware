@@ -21,9 +21,9 @@ function promiseWrapperWithCb(fn) {
             };
             const promise = fn.apply(this, [...args, cb]);
             if (Promise.resolve(promise) == promise) {
-                promise.then(value => resolve(value ? [value] : [])).catch(reject);
+                promise.then(value => resolve(value ? value : [])).catch(reject);
             } else if (promise !== undefined) {
-                resolve([promise]);
+                resolve(promise);
             }
         });
     };
@@ -34,9 +34,9 @@ function promiseWrapper(fn) {
         return new Promise((resolve, reject) => {
             const promise = fn.apply(this, args);
             if (Promise.resolve(promise) == promise) {
-                promise.then(value => resolve(value ? [value] : [])).catch(reject);
+                promise.then(value => resolve(value ? value : [])).catch(reject);
             } else if (promise !== undefined) {
-                resolve([promise]);
+                resolve(promise);
             }
         });
     };
