@@ -50,7 +50,7 @@ e.middleware('test1', fn).pre(fn).post(fn);
 
 // use promise
 const promiseFn = function(value) {
-    return Primise.resolve(value);
+    return Primise.resolve([value]); // return a value list
 }; 
 e.middleware('test2', promiseFn).pre(promiseFn).post(promiseFn);
 
