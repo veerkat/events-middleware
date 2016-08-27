@@ -167,30 +167,30 @@ e1.emit('test2', 0);
 option `postMiddleware` is `false`
 
 ```js
-e1.middleware('test3', function(value, next) {
-    next(null, value);
+e1.middleware('test3', function(next) {
+    next();
 }, {
     postMiddleware: false
-}).pre(function(value, next) {
-    next(null, value);
+}).pre(function(next) {
+    next();
 }).post(function() {
     // not to be called
 });
-e1.emit('test3', 0);
+e1.emit('test3');
 ```
 
 option `onlyPromise` is `true`
 
 ```js
-e1.middleware('test4', function(value, next) {
+e1.middleware('test4', function(next) {
     // next is undefined
 }, {
     onlyPromise: true
-}).pre(function(value, next) {
+}).pre(function(next) {
    // next is undefined
-   return Promise.resolve(value);
+   return Promise.resolve();
 });
-e1.emit('test4', 0);
+e1.emit('test4');
 ```
 
 # License
