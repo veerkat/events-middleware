@@ -21,7 +21,7 @@ function promiseWrapperWithCb(fn) {
             };
             const promise = fn.apply(this, [...args, cb]);
             if (Promise.resolve(promise) == promise) {
-                promise.then((...value) => resolve(value)).catch(reject);
+                promise.then(value => resolve(value ? [value] : [])).catch(reject);
             } else if (promise !== undefined) {
                 resolve([promise]);
             }
@@ -34,7 +34,7 @@ function promiseWrapper(fn) {
         return new Promise((resolve, reject) => {
             const promise = fn.apply(this, args);
             if (Promise.resolve(promise) == promise) {
-                promise.then((...value) => resolve(value)).catch(reject);
+                promise.then(value => resolve(value ? [value] : [])).catch(reject);
             } else if (promise !== undefined) {
                 resolve([promise]);
             }
@@ -124,25 +124,25 @@ class EventMiddleware {
         return this;
     }
 
-    call(...value) {
+    call(...valueList) {
         let idx = 0;
         const len = this._fns.length;
         return new Promise((resolve, reject) => {
-            const next = (nextValue) => {
+            const next = (nextValueList) => {
                 if (this._options.globalArgs) {
-                    nextValue = value;
+                    nextValueList = valueList;
                 }
                 if (!this._options.multiArgs) {
-                    nextValue = nextValue.slice(0, 1);
+                    nextValueList = nextValueList.slice(0, 1);
                 }
                 if (idx >= len) {
-                    const _value = nextValue.length < 2 ? nextValue[0] : nextValue;
-                    return resolve(_value);
+                    const _valueList = nextValueList.length < 2 ? nextValueList[0] : nextValueList;
+                    return resolve(_valueList);
                 }
                 const nextFn = this._fns[idx++];
-                nextFn.apply(this, nextValue).then(next).catch(reject);
+                nextFn.apply(this, nextValueList).then(next).catch(reject);
             };
-            next(value);
+            next(valueList);
         }).then(this._done).catch(this._onError);
     }
 }
