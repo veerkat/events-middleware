@@ -3,45 +3,6 @@
 const util = require('util');
 const _EventEmitter = require('events');
 
-function callable(instance) {
-    return function(...args) {
-        instance.call(...args);
-    };
-}
-
-function promiseWrapperWithCb(fn) {
-    return function(...args) {
-        return new Promise((resolve, reject) => {
-            const cb = function(err, ...value) {
-                if (err) {
-                    return reject(err);
-                } else {
-                    return resolve(value);
-                }
-            };
-            const promise = fn.apply(this, [...args, cb]);
-            if (Promise.resolve(promise) == promise) {
-                promise.then(value => resolve(value ? value : [])).catch(reject);
-            } else if (promise !== undefined) {
-                resolve(promise);
-            }
-        });
-    };
-}
-
-function promiseWrapper(fn) {
-    return function(...args) {
-        return new Promise((resolve, reject) => {
-            const promise = fn.apply(this, args);
-            if (Promise.resolve(promise) == promise) {
-                promise.then(value => resolve(value ? value : [])).catch(reject);
-            } else if (promise !== undefined) {
-                resolve(promise);
-            }
-        });
-    };
-}
-
 class EventMiddleware {
     constructor(eventName, fn, options = {}) {
         this._options = {
@@ -86,9 +47,9 @@ class EventMiddleware {
     compose() {
         let wrapFn;
         if (this._options.onlyPromise) {
-            wrapFn = promiseWrapper;
+            wrapFn = this.constructor.promiseWrapper;
         } else {
-            wrapFn = promiseWrapperWithCb;
+            wrapFn = this.constructor.promiseWrapperWithCb;
         }
         this._fns = this._pres.map(preFn => wrapFn(preFn)).concat([wrapFn(this._main)]);
         if (this._options.postMiddleware) {
@@ -96,7 +57,7 @@ class EventMiddleware {
         }
     }
 
-    catch(callback) {
+    catch (callback) {
         this._onError = callback;
         return this;
     }
@@ -144,6 +105,39 @@ class EventMiddleware {
             };
             next(valueList);
         }).then(this._done).catch(this._onError);
+    }
+
+    static promiseWrapperWithCb(fn) {
+        return function(...args) {
+            return new Promise((resolve, reject) => {
+                const cb = function(err, ...value) {
+                    if (err) {
+                        return reject(err);
+                    } else {
+                        return resolve(value);
+                    }
+                };
+                const promise = fn.apply(this, [...args, cb]);
+                if (Promise.resolve(promise) == promise) {
+                    promise.then(value => resolve(value ? value : [])).catch(reject);
+                } else if (promise !== undefined) {
+                    resolve(promise);
+                }
+            });
+        };
+    }
+
+    static promiseWrapper(fn) {
+        return function(...args) {
+            return new Promise((resolve, reject) => {
+                const promise = fn.apply(this, args);
+                if (Promise.resolve(promise) == promise) {
+                    promise.then(value => resolve(value ? value : [])).catch(reject);
+                } else if (promise !== undefined) {
+                    resolve(promise);
+                }
+            });
+        };
     }
 }
 
@@ -276,8 +270,14 @@ class EventEmitter extends _EventEmitter {
         }
 
         const middleware = this._middlewares.new(eventName, listener, options);
-        super.on(eventName, callable(middleware));
+        super.on(eventName, this.constructor.callable(middleware));
         return this._middlewares.select(eventName);
+    }
+
+    static callable(instance) {
+        return function(...args) {
+            instance.call(...args);
+        }
     }
 }
 
